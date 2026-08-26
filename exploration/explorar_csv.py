@@ -84,7 +84,7 @@ def main():
         "IDItem duplicado:",
         df["IDItem"].duplicated().sum()
     )
-
+    
 
 if __name__ == "__main__":
     main()

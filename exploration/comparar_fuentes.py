@@ -8,7 +8,7 @@ from consumir import obtener_orden_por_codigo
 RUTA_PROYECTO = Path(__file__).resolve().parents[1]
 RUTA_CSV = RUTA_PROYECTO / "data"/"2026-1.csv"
 
-CANTIDAD_OC_PRUEBA = 5
+CANTIDAD_OC_PRUEBA = 10
 
 
 def normalizar_id(valor):
@@ -112,7 +112,50 @@ def main():
             oc_csv,
             oc_api,
         )
+    # ---------------------------------------------------------
+    # Comparación específica de items
+    # ---------------------------------------------------------
 
+    codigo_items = "2404-54-SE26"
 
+    print("\n" + "=" * 70)
+    print(f"COMPARANDO ITEMS DE OC: {codigo_items}")
+    print("=" * 70)
+
+    oc_csv = df[df["Codigo"] == codigo_items]
+
+    datos_api = obtener_orden_por_codigo(codigo_items)
+
+    if datos_api is None or datos_api["Cantidad"] == 0:
+        print("No fue posible obtener la OC desde la API.")
+        return
+
+    oc_api = datos_api["Listado"][0]
+    items_api = oc_api["Items"]["Listado"]
+
+    print("\n=== ITEMS CSV ===")
+
+    columnas_csv = [
+        "IDItem",
+        "codigoProductoONU",
+        "cantidad",
+        "precioNeto",
+    ]
+
+    print(
+        oc_csv[columnas_csv]
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\n=== ITEMS API ===")
+
+    for item in items_api[:10]:
+        print(
+            "Correlativo:", item["Correlativo"],
+            "| CodigoProducto:", item["CodigoProducto"],
+            "| Cantidad:", item["Cantidad"],
+            "| PrecioNeto:", item["PrecioNeto"],
+        )
 if __name__ == "__main__":
     main()
