@@ -1,0 +1,22 @@
+{
+	"name": "ds_oc_historical_csv",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_adls_chilecompra",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileSystem": "landing"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
