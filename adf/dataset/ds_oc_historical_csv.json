@@ -5,14 +5,34 @@
 			"referenceName": "ls_adls_chilecompra",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"year": {
+				"type": "string"
+			},
+			"month": {
+				"type": "string"
+			},
+			"file_name": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "DelimitedText",
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().file_name",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat(\n    'chilecompra/ordenes_compra/historical/year=',\n    dataset().year,\n    '/month=',\n    dataset().month\n)",
+					"type": "Expression"
+				},
 				"fileSystem": "landing"
 			},
-			"columnDelimiter": ",",
+			"columnDelimiter": ";",
+			"encodingName": "ISO-8859-1",
 			"escapeChar": "\\",
 			"firstRowAsHeader": true,
 			"quoteChar": "\""
