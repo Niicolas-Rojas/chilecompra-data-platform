@@ -1,0 +1,15 @@
+{
+	"name": "adf-chilecompra-dev",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "ab3bdfe1-bb24-4b43-9bff-8f7d96f5813e",
+		"tenantId": "72c27ad7-c737-4610-90ec-4fa6b6f723fb"
+	}
+}
