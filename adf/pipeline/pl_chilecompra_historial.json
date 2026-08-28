@@ -1,6 +1,87 @@
 {
 	"name": "pl_chilecompra_historial",
 	"properties": {
+		"activities": [
+			{
+				"name": "gm_check_historical_file",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_oc_historical_csv",
+						"type": "DatasetReference",
+						"parameters": {
+							"year": {
+								"value": "@pipeline().parameters.year",
+								"type": "Expression"
+							},
+							"month": {
+								"value": "@pipeline().parameters.month",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@pipeline().parameters.file_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"exists",
+						"size",
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_historical_file_exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "gm_check_historical_file",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@activity('gm_check_historical_file').output.exists",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "fail_historical_file_not_found",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@concat(\n    'No existe el archivo histórico: year=',\n    pipeline().parameters.year,\n    ', month=',\n    pipeline().parameters.month,\n    ', file=',\n    pipeline().parameters.file_name\n)",
+									"type": "Expression"
+								},
+								"errorCode": "HISTORICAL_FILE_NOT_FOUND"
+							}
+						}
+					]
+				}
+			}
+		],
 		"parameters": {
 			"year": {
 				"type": "string",
