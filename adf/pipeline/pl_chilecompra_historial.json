@@ -1,0 +1,20 @@
+{
+	"name": "pl_chilecompra_historial",
+	"properties": {
+		"parameters": {
+			"year": {
+				"type": "string",
+				"defaultValue": "2026"
+			},
+			"month": {
+				"type": "string",
+				"defaultValue": "01"
+			},
+			"file_name": {
+				"type": "string",
+				"defaultValue": "2026-1.csv"
+			}
+		},
+		"annotations": []
+	}
+}
