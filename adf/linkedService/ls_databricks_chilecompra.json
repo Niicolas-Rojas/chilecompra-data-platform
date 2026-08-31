@@ -1,0 +1,12 @@
+{
+	"name": "ls_databricks_chilecompra",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-7405617117801014.14.azuredatabricks.net",
+			"authentication": "MSI",
+			"workspaceResourceId": "/subscriptions/9f40e736-9b36-4580-85b5-6e5fc0d32490/resourceGroups/chilecompra-group/providers/Microsoft.Databricks/workspaces/dbw-chilecompra-dev"
+		}
+	}
+}
