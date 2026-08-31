@@ -1,0 +1,37 @@
+{
+	"name": "Json1ds_oc_incremental_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_adls_chilecompra",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"process_date": {
+				"type": "string"
+			},
+			"run_id": {
+				"type": "string"
+			},
+			"file_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().file_name",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat(\n    'chilecompra/ordenes_compra/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
+					"type": "Expression"
+				},
+				"fileSystem": "landing"
+			}
+		},
+		"schema": {}
+	}
+}

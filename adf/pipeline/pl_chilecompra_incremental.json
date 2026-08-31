@@ -1,0 +1,108 @@
+{
+	"name": "pl_chilecompra_incremental",
+	"properties": {
+		"activities": [
+			{
+				"name": "web_get_mp_ticket",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": "https://kv-chilecompra-dev.vault.azure.net/secrets/mercado-publico-ticket?api-version=7.5",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "copy_oc_api_to_landing",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "web_get_mp_ticket",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"paginationRules": {
+							"supportRFC5988": "true"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_mp_ordenes_compra_api",
+						"type": "DatasetReference",
+						"parameters": {
+							"realative_url": {
+								"value": "@concat(\n    'ordenesdecompra.json?fecha=',\n    formatDateTime(pipeline().parameters.process_date,'ddMMyyyy'),\n    '&ticket=',\n    activity('web_get_mp_ticket').output.value\n)",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Json1ds_oc_incremental_json",
+						"type": "DatasetReference",
+						"parameters": {
+							"process_date": {
+								"value": "@pipeline().parameters.process_date",
+								"type": "Expression"
+							},
+							"run_id": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "ordenes_compra.json",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"process_date": {
+				"type": "string",
+				"defaultValue": "2026-08-31"
+			}
+		},
+		"annotations": []
+	}
+}

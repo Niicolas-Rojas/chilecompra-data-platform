@@ -14,7 +14,7 @@
 		"type": "RestResource",
 		"typeProperties": {
 			"relativeUrl": {
-				"value": "@dataset().relative_url",
+				"value": "@dataset().realative_url",
 				"type": "Expression"
 			}
 		},
