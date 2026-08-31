@@ -1,0 +1,23 @@
+{
+	"name": "ds_mp_ordenes_compra_api",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_rest_mercado_publico",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"realative_url": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "@dataset().relative_url",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}
