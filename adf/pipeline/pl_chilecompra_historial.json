@@ -40,6 +40,7 @@
 					],
 					"storeSettings": {
 						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
 						"enablePartitionDiscovery": false
 					},
 					"formatSettings": {
@@ -76,6 +77,46 @@
 									"type": "Expression"
 								},
 								"errorCode": "HISTORICAL_FILE_NOT_FOUND"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "job_chilecompra_historical",
+							"type": "DatabricksJob",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"jobId": "810107194472997",
+								"jobParameters": {
+									"year": {
+										"value": "@pipeline().parameters.year",
+										"type": "Expression"
+									},
+									"month": {
+										"value": "@pipeline().parameters.month",
+										"type": "Expression"
+									},
+									"file_name": {
+										"value": "@pipeline().parameters.file_name",
+										"type": "Expression"
+									},
+									"run_id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_databricks_chilecompra",
+								"type": "LinkedServiceReference"
 							}
 						}
 					]
