@@ -1,0 +1,12 @@
+{
+	"name": "ls_rest_mercado_publico",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://api.mercadopublico.cl/servicios/v1/publico/",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}
