@@ -95,6 +95,43 @@
 						}
 					}
 				]
+			},
+			{
+				"name": "job_chilecompra_incremental",
+				"type": "DatabricksJob",
+				"dependsOn": [
+					{
+						"activity": "copy_oc_api_to_landing",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"jobId": "917189504374447",
+					"jobParameters": {
+						"process_date": {
+							"value": "@pipeline().parameters.process_date",
+							"type": "Expression"
+						},
+						"run_id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_databricks_chilecompra",
+					"type": "LinkedServiceReference"
+				}
 			}
 		],
 		"parameters": {
