@@ -8,6 +8,9 @@
 				"pipelineReference": {
 					"referenceName": "pl_chilecompra_incremental",
 					"type": "PipelineReference"
+				},
+				"parameters": {
+					"process_date": "@formatDateTime(\n    addDays(trigger().scheduledTime, -1),\n    'yyyy-MM-dd'\n)"
 				}
 			}
 		],
