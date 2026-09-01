@@ -19,16 +19,8 @@
 			"recurrence": {
 				"frequency": "Day",
 				"interval": 1,
-				"startTime": "2026-09-02T02:00:00",
-				"timeZone": "Pacific SA Standard Time",
-				"schedule": {
-					"minutes": [
-						0
-					],
-					"hours": [
-						2
-					]
-				}
+				"startTime": "2026-08-31T21:55:00",
+				"timeZone": "Pacific SA Standard Time"
 			}
 		}
 	}
