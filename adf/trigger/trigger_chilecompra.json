@@ -10,7 +10,7 @@
 					"type": "PipelineReference"
 				},
 				"parameters": {
-					"process_date": "@formatDateTime(\n    addDays(trigger().scheduledTime, -1),\n    'yyyy-MM-dd'\n)"
+					"process_date": "@formatDateTime(addDays(convertFromUtc(trigger().scheduledTime,'Pacific SA Standard Time'),-1),'yyyy-MM-dd')"
 				}
 			}
 		],
