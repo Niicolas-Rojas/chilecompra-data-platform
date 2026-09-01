@@ -1,0 +1,714 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-chilecompra-dev"
+		},
+		"ls_adls_chilecompra_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stchilecompradev.dfs.core.windows.net/"
+		},
+		"ls_rest_mercado_publico_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.mercadopublico.cl/servicios/v1/publico/"
+		},
+		"trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date": {
+			"type": "string",
+			"defaultValue": "@formatDateTime(\n    addDays(trigger().scheduledTime, -1),\n    'yyyy-MM-dd'\n)"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_chilecompra_historial')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "gm_check_historical_file",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_oc_historical_csv",
+								"type": "DatasetReference",
+								"parameters": {
+									"year": {
+										"value": "@pipeline().parameters.year",
+										"type": "Expression"
+									},
+									"month": {
+										"value": "@pipeline().parameters.month",
+										"type": "Expression"
+									},
+									"file_name": {
+										"value": "@pipeline().parameters.file_name",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"exists",
+								"size",
+								"lastModified"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "if_historical_file_exists",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "gm_check_historical_file",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@activity('gm_check_historical_file').output.exists",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "fail_historical_file_not_found",
+									"type": "Fail",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@concat(\n    'No existe el archivo histórico: year=',\n    pipeline().parameters.year,\n    ', month=',\n    pipeline().parameters.month,\n    ', file=',\n    pipeline().parameters.file_name\n)",
+											"type": "Expression"
+										},
+										"errorCode": "HISTORICAL_FILE_NOT_FOUND"
+									}
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "job_chilecompra_historical",
+									"type": "DatabricksJob",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"jobId": "810107194472997",
+										"jobParameters": {
+											"year": {
+												"value": "@pipeline().parameters.year",
+												"type": "Expression"
+											},
+											"month": {
+												"value": "@pipeline().parameters.month",
+												"type": "Expression"
+											},
+											"file_name": {
+												"value": "@pipeline().parameters.file_name",
+												"type": "Expression"
+											},
+											"run_id": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "ls_databricks_chilecompra",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"year": {
+						"type": "string",
+						"defaultValue": "2026"
+					},
+					"month": {
+						"type": "string",
+						"defaultValue": "06"
+					},
+					"file_name": {
+						"type": "string",
+						"defaultValue": "2026-6.csv"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_oc_historical_csv')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_databricks_chilecompra')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_oc_historical_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_chilecompra",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"year": {
+						"type": "string"
+					},
+					"month": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(\n    'chilecompra/ordenes_compra/historical/year=',\n    dataset().year,\n    '/month=',\n    dataset().month\n)",
+							"type": "Expression"
+						},
+						"fileSystem": "landing"
+					},
+					"columnDelimiter": ";",
+					"encodingName": "ISO-8859-1",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_chilecompra')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_adls_chilecompra')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_chilecompra_properties_typeProperties_url')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_databricks_chilecompra')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-7405617117801014.14.azuredatabricks.net",
+					"authentication": "MSI",
+					"workspaceResourceId": "/subscriptions/9f40e736-9b36-4580-85b5-6e5fc0d32490/resourceGroups/chilecompra-group/providers/Microsoft.Databricks/workspaces/dbw-chilecompra-dev"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_chilecompra_incremental')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "web_get_mp_ticket",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": true,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "GET",
+							"headers": {},
+							"url": "https://kv-chilecompra-dev.vault.azure.net/secrets/mercado-publico-ticket?api-version=7.5",
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "copy_oc_api_to_landing",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "web_get_mp_ticket",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": true,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_mp_ordenes_compra_api",
+								"type": "DatasetReference",
+								"parameters": {
+									"realative_url": {
+										"value": "@concat(\n    'ordenesdecompra.json?fecha=',\n    formatDateTime(pipeline().parameters.process_date,'ddMMyyyy'),\n    '&ticket=',\n    activity('web_get_mp_ticket').output.value\n)",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_oc_incremental_json",
+								"type": "DatasetReference",
+								"parameters": {
+									"process_date": {
+										"value": "@pipeline().parameters.process_date",
+										"type": "Expression"
+									},
+									"run_id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"file_name": {
+										"value": "ordenes_compra.json",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "job_chilecompra_incremental",
+						"type": "DatabricksJob",
+						"dependsOn": [
+							{
+								"activity": "copy_oc_api_to_landing",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"jobId": "917189504374447",
+							"jobParameters": {
+								"process_date": {
+									"value": "@pipeline().parameters.process_date",
+									"type": "Expression"
+								},
+								"run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_databricks_chilecompra",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "copy_licitaciones_api_to_landing",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "web_get_mp_ticket",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": true
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_mp_licitaciones_api",
+								"type": "DatasetReference",
+								"parameters": {
+									"relative_url": {
+										"value": "@concat(\n    'licitaciones.json?fecha=',\n    formatDateTime(pipeline().parameters.process_date,'ddMMyyyy'),\n    '&ticket=',\n    activity('web_get_mp_ticket').output.value\n)",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_licitaciones_incremental_json",
+								"type": "DatasetReference",
+								"parameters": {
+									"process_date": {
+										"value": "@pipeline().parameters.process_date",
+										"type": "Expression"
+									},
+									"run_id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"file_name": "licitaciones.json"
+								}
+							}
+						]
+					},
+					{
+						"name": "Job_chilecompra_licitaciones",
+						"type": "DatabricksJob",
+						"dependsOn": [
+							{
+								"activity": "copy_licitaciones_api_to_landing",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"jobId": "133573282841917",
+							"jobParameters": {
+								"run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								},
+								"process_date": {
+									"value": "@pipeline().parameters.process_date",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_databricks_chilecompra",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"process_date": {
+						"type": "string",
+						"defaultValue": "2026-08-31"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_mp_ordenes_compra_api')]",
+				"[concat(variables('factoryId'), '/datasets/ds_oc_incremental_json')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_databricks_chilecompra')]",
+				"[concat(variables('factoryId'), '/datasets/ds_mp_licitaciones_api')]",
+				"[concat(variables('factoryId'), '/datasets/ds_licitaciones_incremental_json')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_rest_mercado_publico')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_rest_mercado_publico_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_mp_ordenes_compra_api')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_mercado_publico",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"realative_url": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().realative_url",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_mercado_publico')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_oc_incremental_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_chilecompra",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"process_date": {
+						"type": "string"
+					},
+					"run_id": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(\n    'chilecompra/ordenes_compra/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
+							"type": "Expression"
+						},
+						"fileSystem": "landing"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_chilecompra')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_mp_licitaciones_api')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_mercado_publico",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"relative_url": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().relative_url",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_mercado_publico')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_licitaciones_incremental_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_chilecompra",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"process_date": {
+						"type": "string"
+					},
+					"run_id": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(\n    'chilecompra/licitaciones/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
+							"type": "Expression"
+						},
+						"fileSystem": "landing"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_chilecompra')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trigger_chilecompra')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_chilecompra_incremental",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"process_date": "[parameters('trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2026-09-02T02:00:00",
+						"timeZone": "Pacific SA Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								2
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_chilecompra_incremental')]"
+			]
+		}
+	]
+}

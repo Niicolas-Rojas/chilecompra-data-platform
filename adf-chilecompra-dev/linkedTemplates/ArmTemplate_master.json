@@ -1,0 +1,63 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-chilecompra-dev"
+		},
+		"ls_adls_chilecompra_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stchilecompradev.dfs.core.windows.net/"
+		},
+		"ls_rest_mercado_publico_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.mercadopublico.cl/servicios/v1/publico/"
+		},
+		"trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date": {
+			"type": "string",
+			"defaultValue": "@formatDateTime(\n    addDays(trigger().scheduledTime, -1),\n    'yyyy-MM-dd'\n)"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "adf-chilecompra-dev_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"ls_adls_chilecompra_properties_typeProperties_url": {
+						"value": "[parameters('ls_adls_chilecompra_properties_typeProperties_url')]"
+					},
+					"ls_rest_mercado_publico_properties_typeProperties_url": {
+						"value": "[parameters('ls_rest_mercado_publico_properties_typeProperties_url')]"
+					},
+					"trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date": {
+						"value": "[parameters('trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

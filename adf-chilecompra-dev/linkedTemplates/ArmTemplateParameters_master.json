@@ -1,0 +1,24 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "adf-chilecompra-dev"
+		},
+		"ls_adls_chilecompra_properties_typeProperties_url": {
+			"value": "https://stchilecompradev.dfs.core.windows.net/"
+		},
+		"ls_rest_mercado_publico_properties_typeProperties_url": {
+			"value": "https://api.mercadopublico.cl/servicios/v1/publico/"
+		},
+		"trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date": {
+			"value": "@formatDateTime(\n    addDays(trigger().scheduledTime, -1),\n    'yyyy-MM-dd'\n)"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
