@@ -12,7 +12,7 @@
 			"value": "https://api.mercadopublico.cl/servicios/v1/publico/"
 		},
 		"trigger_chilecompra_properties_pl_chilecompra_incremental_parameters_process_date": {
-			"value": "@formatDateTime(\n    addDays(trigger().scheduledTime, -1),\n    'yyyy-MM-dd'\n)"
+			"value": "@formatDateTime(addDays(convertFromUtc(trigger().scheduledTime,'Pacific SA Standard Time'),-1),'yyyy-MM-dd')"
 		},
 		"containerUri": {
 			"value": ""
