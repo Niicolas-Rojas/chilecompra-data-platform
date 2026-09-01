@@ -1,5 +1,5 @@
 {
-	"name": "ds_oc_incremental_json",
+	"name": "ds_licitaciones_incremental_json",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_adls_chilecompra",
@@ -26,7 +26,7 @@
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "@concat(\n    'chilecompra/ordenes_compra/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
+					"value": "@concat(\n    'chilecompra/licitaciones/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
 					"type": "Expression"
 				},
 				"fileSystem": "landing"
