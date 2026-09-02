@@ -68,6 +68,104 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/ds_licitaciones_incremental_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_chilecompra",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"process_date": {
+						"type": "string"
+					},
+					"run_id": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(\n    'chilecompra/licitaciones/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
+							"type": "Expression"
+						},
+						"fileSystem": "landing"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_chilecompra')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_mp_licitaciones_api')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_mercado_publico",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"relative_url": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().relative_url",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_mercado_publico')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_mp_ordenes_compra_api')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_mercado_publico",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"realative_url": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().realative_url",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_mercado_publico')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_oc_historical_csv')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -115,34 +213,6 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/ds_mp_ordenes_compra_api')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_rest_mercado_publico",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"realative_url": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "RestResource",
-				"typeProperties": {
-					"relativeUrl": {
-						"value": "@dataset().realative_url",
-						"type": "Expression"
-					}
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_rest_mercado_publico')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/ds_oc_incremental_json')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -173,76 +243,6 @@
 						},
 						"folderPath": {
 							"value": "@concat(\n    'chilecompra/ordenes_compra/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
-							"type": "Expression"
-						},
-						"fileSystem": "landing"
-					}
-				},
-				"schema": {}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_adls_chilecompra')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_mp_licitaciones_api')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_rest_mercado_publico",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"relative_url": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "RestResource",
-				"typeProperties": {
-					"relativeUrl": {
-						"value": "@dataset().relative_url",
-						"type": "Expression"
-					}
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_rest_mercado_publico')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_licitaciones_incremental_json')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_adls_chilecompra",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"process_date": {
-						"type": "string"
-					},
-					"run_id": {
-						"type": "string"
-					},
-					"file_name": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "Json",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"fileName": {
-							"value": "@dataset().file_name",
-							"type": "Expression"
-						},
-						"folderPath": {
-							"value": "@concat(\n    'chilecompra/licitaciones/incremental/process_date=',\n    dataset().process_date,\n    '/run_id=',\n    dataset().run_id\n)",
 							"type": "Expression"
 						},
 						"fileSystem": "landing"
@@ -391,11 +391,11 @@
 					},
 					"month": {
 						"type": "string",
-						"defaultValue": "06"
+						"defaultValue": "08"
 					},
 					"file_name": {
 						"type": "string",
-						"defaultValue": "2026-6.csv"
+						"defaultValue": "2026-8.csv"
 					}
 				},
 				"annotations": []
