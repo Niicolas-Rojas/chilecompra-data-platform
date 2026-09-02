@@ -130,11 +130,11 @@
 			},
 			"month": {
 				"type": "string",
-				"defaultValue": "06"
+				"defaultValue": "08"
 			},
 			"file_name": {
 				"type": "string",
-				"defaultValue": "2026-6.csv"
+				"defaultValue": "2026-8.csv"
 			}
 		},
 		"annotations": []
