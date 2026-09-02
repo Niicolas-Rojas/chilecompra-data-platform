@@ -419,6 +419,39 @@
 							"referenceName": "ls_databricks_chilecompra",
 							"type": "LinkedServiceReference"
 						}
+					},
+					{
+						"name": "Job_chilecompra_gold",
+						"type": "DatabricksJob",
+						"dependsOn": [
+							{
+								"activity": "job_chilecompra_incremental",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Job_chilecompra_licitaciones",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"jobId": "228601867653498"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_databricks_chilecompra",
+							"type": "LinkedServiceReference"
+						}
 					}
 				],
 				"policy": {
