@@ -10,18 +10,6 @@ Integra carga histórica e ingesta incremental diaria mediante una arquitectura 
 
 ![Arquitectura ChileCompra Data Platform](docs/images/Diagrama-chile-compra.png)
 
-```text
-ChileCompra / Mercado Público
-        ↓
-Azure Data Factory
-        ↓
-ADLS Gen2 - Landing
-        ↓
-Azure Databricks
-Bronze → Silver → Gold
-        ↓
-Databricks AI/BI Dashboard
-```
 
 ---
 
