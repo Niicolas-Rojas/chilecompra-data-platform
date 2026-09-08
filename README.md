@@ -1,544 +1,270 @@
 # ChileCompra Data Platform
 
-End-to-end batch data platform built on Azure and Databricks to ingest, process, model, and analyze Chilean public procurement data from Mercado Público.
+Plataforma de datos **batch end-to-end** construida en Azure y Databricks para ingerir, procesar y analizar datos públicos de compras del Estado de Chile provenientes de ChileCompra / Mercado Público.
 
-The project combines historical bulk files with daily API ingestion and implements an automated Medallion Architecture with incremental processing, idempotent reruns, data quality controls, Delta Lake MERGE operations, cloud security, orchestration, business aggregates, and an automatically refreshed analytics dashboard.
-
----
-
-## Project Overview
-
-ChileCompra publishes public procurement information through bulk datasets and the Mercado Público API.
-
-The goal of this project was not only to analyze the data, but to design a production-oriented data engineering platform capable of:
-
-- loading historical procurement data;
-- ingesting new data every day;
-- supporting reruns and backfills;
-- handling a mutable API source;
-- validating data before and after writes;
-- separating raw, curated, and business-ready data;
-- securely accessing Azure resources without embedded credentials;
-- orchestrating dependencies and failures;
-- exposing business metrics through an analytics layer;
-- automatically refreshing dashboards after successful processing.
-
-The platform currently processes more than **1.1 million purchase orders** and more than **2.8 million purchase-order items**, with new API data incorporated through the daily pipeline.
+El proyecto integra carga histórica e ingesta incremental diaria mediante una arquitectura **Medallion**, con procesamiento idempotente, controles de calidad, orquestación automatizada, seguridad basada en identidades administradas y una capa analítica con dashboard actualizado automáticamente.
 
 ---
 
-## Architecture
+## Resultados
 
-The platform follows this high-level flow:
+- **+1.1 millones de órdenes de compra** procesadas.
+- **+2.8 millones de ítems** procesados.
+- Ingesta histórica de órdenes de compra desde archivos masivos.
+- Ingesta incremental diaria desde la API de Mercado Público.
+- Pipelines preparados para **reruns y backfills** mediante `process_date`.
+- Procesamiento incremental con **Delta Lake MERGE** y reemplazo determinístico de particiones.
+- Controles de **Data Quality** antes y después de las escrituras.
+- Pipeline automatizado desde la fuente hasta el dashboard analítico.
+- Ejecuciones diarias operando exitosamente durante el período de observación.
+
+---
+
+## Arquitectura
+
+<!--
+Descomentar cuando agreguemos el diagrama:
+
+![Arquitectura ChileCompra Data Platform](docs/images/architecture.png)
+-->
 
 ```text
-Mercado Público
- Bulk CSV + REST API
-        |
-        v
-Azure Data Factory
- Historical + Incremental orchestration
-        |
-        v
-ADLS Gen2
- Landing Zone
-        |
-        v
-Azure Databricks
-        |
-        +--> Bronze
-        |
-        +--> Silver
-        |
-        +--> Gold
-        |
-        v
-Databricks AI/BI
-ChileCompra Analytics
+ChileCompra / Mercado Público
+        │
+        ├── CSV históricos
+        └── REST API
+                │
+                ▼
+        Azure Data Factory
+                │
+                ▼
+          ADLS Gen2 Landing
+                │
+                ▼
+        Azure Databricks
+                │
+        ┌───────┼───────┐
+        ▼       ▼       ▼
+      Bronze  Silver   Gold
+                        │
+                        ▼
+              Databricks AI/BI
+              ChileCompra Analytics
 ```
 
-The final architecture also uses:
-
-- **Azure Key Vault** for API credentials;
-- **Managed Identity** for Azure Data Factory;
-- **Databricks Access Connector** for storage access;
-- **Azure RBAC** for service permissions;
-- **Unity Catalog** for data governance;
-- **Delta Lake** for transactional tables;
-- **Lakeflow Jobs / Databricks Jobs** for transformation workflows;
-- **GitHub** for source control;
-- **Databricks AI/BI Dashboards** for analytics.
-
-> A detailed architecture diagram will be added to this repository.
+La arquitectura se complementa con **Azure Key Vault**, **Managed Identities**, **Databricks Access Connector**, **RBAC** y **Unity Catalog** para evitar credenciales embebidas y gobernar el acceso a los datos.
 
 ---
 
-## Technology Stack
+## Stack tecnológico
 
-| Layer | Technology |
+| Área | Tecnología |
 |---|---|
-| Source | Mercado Público API, ChileCompra bulk CSV |
-| Orchestration | Azure Data Factory |
-| Storage | Azure Data Lake Storage Gen2 |
-| Processing | Azure Databricks |
+| Orquestación | Azure Data Factory |
+| Data Lake | Azure Data Lake Storage Gen2 |
+| Procesamiento | Azure Databricks |
+| Lenguajes | Python, PySpark, SQL |
+| Formato | Delta Lake |
+| Arquitectura | Medallion: Bronze / Silver / Gold |
+| Gobierno | Unity Catalog |
+| Secretos | Azure Key Vault |
+| Identidad | Managed Identity / Access Connector |
 | Compute | Databricks Serverless |
-| Language | Python, PySpark, SQL |
-| Storage Format | Delta Lake |
-| Governance | Unity Catalog |
-| Secrets | Azure Key Vault |
-| Identity | Managed Identities / Databricks Access Connector |
 | Analytics | Databricks AI/BI Dashboards |
-| Version Control | GitHub |
+| Versionamiento | Git + GitHub |
 
 ---
 
-## Data Sources
+## Qué construí
 
-### Historical Purchase Orders
+### Ingesta histórica + incremental
 
-Historical purchase orders are loaded from ChileCompra bulk CSV files.
+Se implementaron dos estrategias de entrada:
 
-The historical bootstrap covers:
+- **Histórica:** archivos masivos CSV de órdenes de compra.
+- **Incremental:** API diaria de órdenes de compra y licitaciones.
+
+La separación permite realizar el bootstrap histórico una vez y continuar posteriormente mediante cargas incrementales controladas.
+
+### Arquitectura Medallion
 
 ```text
-January 2026 → August 2026
+Landing
+   ↓
+Bronze
+   ↓
+Silver
+   ↓
+Gold
+   ↓
+Dashboard
 ```
 
-The bulk source has item-level granularity:
+**Bronze** conserva los datos de origen junto con metadatos de ingesta.
+
+**Silver** normaliza tipos, resuelve duplicados, aplica reglas de negocio y consolida entidades mediante `MERGE`.
+
+**Gold** genera agregaciones orientadas al consumo analítico.
+
+### Procesamiento idempotente
+
+Cada ejecución incremental utiliza:
 
 ```text
-1 row = 1 purchase-order item
+process_date → fecha lógica procesada
+run_id       → ejecución física de ADF
 ```
 
-The purchase-order code is therefore repeated across items, while the item identifier is used as the natural key for the item-level Silver table.
+Esto permite repetir una fecha o realizar un backfill sin modificar el código del pipeline.
 
-### Incremental Purchase Orders
+Landing conserva cada ejecución mediante `run_id`, mientras Bronze y Silver mantienen un estado final determinístico.
 
-Starting from September 2026, purchase-order updates are ingested daily from the Mercado Público API.
+### Data Quality
+
+Se implementaron validaciones críticas como:
+
+- claves nulas;
+- duplicados inesperados;
+- estados no mapeados;
+- relaciones padre/hijo inválidas;
+- discrepancias de conteos;
+- verificaciones posteriores a escrituras y `MERGE`.
+
+Una violación crítica genera una excepción y provoca el fallo de la tarea, propagándose hacia la orquestación.
+
+---
+
+## Pipeline automatizado
+
+Azure Data Factory actúa como orquestador principal.
+
+```text
+Trigger diario
+     │
+     ▼
+Obtención del secreto desde Key Vault
+     │
+     ├───────────────┐
+     ▼               ▼
+Órdenes de Compra   Licitaciones
+     │               │
+     ▼               ▼
+   Landing         Landing
+     │               │
+     ▼               ▼
+Bronze → Silver  Bronze → Silver
+     │               │
+     └───────┬───────┘
+             ▼
+            Gold
+             │
+             ▼
+      Refresh Dashboard
+```
+
+Las ramas de órdenes de compra y licitaciones se procesan en paralelo.
+
+La capa Gold solo comienza cuando ambas ramas terminan correctamente y el dashboard se actualiza únicamente después de que todas las tareas Gold finalizan con éxito.
+
+---
+
+## Principales decisiones de ingeniería
+
+**Batch en lugar de streaming**  
+Los datos no requieren procesamiento en tiempo real. Un pipeline diario reduce complejidad y costo operacional.
+
+**No inferir eliminaciones desde la API**  
+La API es mutable y no entrega semántica CDC completa. La ausencia de un registro en una respuesta posterior no se interpreta automáticamente como un `DELETE`.
+
+**MERGE en Silver**  
+Las entidades provenientes de la API se actualizan únicamente cuando la versión recibida es más reciente que la almacenada.
+
+**Idempotencia separada de trazabilidad**  
+`run_id` conserva evidencia de cada ejecución en Landing, mientras `process_date` controla el estado lógico procesado.
+
+**Gold determinístico**  
+Las tablas Gold son pequeñas comparadas con Silver, por lo que pueden reconstruirse completamente reduciendo complejidad incremental.
+
+**Ejecución paralela**  
+Las transformaciones Gold independientes se ejecutan simultáneamente y convergen antes del refresh analítico.
+
+---
+
+## Analytics
+
+El proyecto incluye el dashboard versionado:
+
+**ChileCompra Analytics**
+
+con dos páginas principales.
+
+### Órdenes de Compra
+
+- total de órdenes;
+- monto total de órdenes;
+- proveedores y organismos distintos;
+- evolución mensual;
+- cantidad mensual de órdenes;
+- Top 10 organismos;
+- Top 10 proveedores;
+- filtro interactivo por período.
+
+<!--
+![Dashboard Órdenes](docs/images/dashboard-orders.png)
+-->
 
 ### Licitaciones
 
-Licitaciones are also ingested daily through the Mercado Público API.
+- total de licitaciones observadas;
+- publicadas, adjudicadas y desiertas;
+- distribución por estado;
+- distribución por mes de cierre;
+- composición mensual por estado;
+- porcentaje de órdenes con código de licitación;
+- filtro por mes de cierre.
 
-Their API coverage begins with the incremental pipeline and therefore does **not** represent a complete historical snapshot of all previous licitaciones.
+<!--
+![Dashboard Licitaciones](docs/images/dashboard-licitaciones.png)
+-->
 
----
-
-## Landing Zone
-
-Azure Data Factory stores immutable source executions in ADLS Gen2.
-
-```text
-landing/
-└── chilecompra/
-    ├── ordenes_compra/
-    │   ├── historical/
-    │   │   └── year=YYYY/month=MM/
-    │   └── incremental/
-    │       └── process_date=YYYY-MM-DD/
-    │           └── run_id=<ADF_RUN_ID>/
-    │
-    └── licitaciones/
-        └── incremental/
-            └── process_date=YYYY-MM-DD/
-                └── run_id=<ADF_RUN_ID>/
-```
-
-Two identifiers are deliberately separated:
-
-- `process_date`: business date being processed;
-- `run_id`: unique execution identifier.
-
-This allows the same business date to be rerun without overwriting the original Landing execution.
+El dashboard forma parte del flujo automatizado y se refresca después de la actualización exitosa de Gold.
 
 ---
 
-## Medallion Architecture
+## Seguridad
 
-### Bronze
+La plataforma evita almacenar credenciales directamente en código.
 
-Bronze preserves source-level records while adding ingestion metadata.
+Se utilizan:
 
-Main responsibilities:
+- **Azure Key Vault** para el ticket de Mercado Público;
+- **Managed Identity** para Azure Data Factory;
+- **RBAC** para acceso a ADLS Gen2;
+- **Databricks Access Connector** para autenticación contra Storage;
+- **Unity Catalog** para gobierno del lakehouse;
+- `.gitignore` para excluir secretos locales.
 
-- ingest historical CSV files;
-- ingest daily API JSON responses;
-- preserve source information;
-- normalize column naming;
-- attach ingestion metadata;
-- validate basic source contracts;
-- provide deterministic partition replacement for reruns.
-
-Examples of metadata stored in Bronze include:
-
-```text
-_ingestion_timestamp
-_source_file
-_process_date
-_pipeline_run_id
-```
-
-Historical and incremental ingestion use different strategies because the source contracts are different.
+No se utilizan storage keys ni credenciales embebidas en notebooks.
 
 ---
 
-### Silver
-
-Silver contains typed, standardized and deduplicated business entities.
-
-Main tables include:
-
-```text
-chilecompra.silver.ordenes_compra
-chilecompra.silver.ordenes_compra_items
-chilecompra.silver.licitaciones
-```
-
-Transformations include:
-
-- type casting;
-- date normalization;
-- decimal normalization;
-- state mapping;
-- deduplication;
-- entity-level keys;
-- foreign-key validation;
-- API freshness handling;
-- Delta Lake MERGE operations.
-
-#### Mutable API handling
-
-The Mercado Público API is mutable and does not expose true CDC semantics.
-
-For this reason, the pipeline uses an **upsert strategy** rather than interpreting missing records as deletes.
-
-When several API versions of the same entity exist, the newest version is selected using source and processing timestamps.
-
-This avoids deleting valid historical entities only because they disappear from a later API response.
-
----
-
-## Incremental Processing and Idempotency
-
-The daily pipeline receives a controlled parameter:
-
-```text
-process_date
-```
-
-The same pipeline can therefore be used for:
-
-- normal daily processing;
-- reruns;
-- backfills.
-
-No code modification is required to process another date.
-
-### Bronze
-
-Incremental Bronze writes replace only the partition associated with the requested `process_date`.
-
-### Silver
-
-Silver uses Delta Lake `MERGE` to insert new entities and update entities only when the incoming API version is newer than the existing version.
-
-### Gold
-
-Gold tables contain relatively small business aggregates and are rebuilt deterministically from Silver.
-
-Running the same `process_date` again therefore produces the same final business state.
-
----
-
-## Data Quality
-
-Data Quality checks are executed both **before and after writes**.
-
-Critical violations fail the Databricks task and propagate the failure to the orchestrator.
-
-Examples include:
-
-- null purchase-order codes;
-- null item identifiers;
-- unexpected duplicate keys;
-- invalid state mappings;
-- broken item-to-order relationships;
-- inconsistent source row counts;
-- failed post-write verification.
-
-Not every anomaly is treated as an error.
-
-For example, duplicate licitacion codes inside the same API response were observed to be legitimate source behavior and are handled during Silver deduplication rather than causing Bronze ingestion to fail.
-
-This separates:
-
-```text
-critical data contract violations
-```
-
-from:
-
-```text
-valid but unusual source behavior
-```
-
----
-
-## Orchestration
-
-Azure Data Factory acts as the outer orchestrator.
-
-Two main pipelines are versioned in the repository:
-
-```text
-pl_chilecompra_historial
-pl_chilecompra_incremental
-```
-
-### Historical Pipeline
-
-The historical pipeline is manually parameterized and supports loading a specific year/month source file.
-
-It performs:
-
-```text
-Source validation
-      ↓
-Historical Bronze ingestion
-      ↓
-Purchase Orders Silver
-      ↓
-Purchase Order Items Silver
-```
-
-### Incremental Pipeline
-
-The incremental pipeline runs daily and processes the previous Chilean business date.
-
-Conceptually:
-
-```text
-                 ┌─ Purchase Orders API
-                 │        ↓
-Key Vault ──> ADF│     Landing
-                 │        ↓
-                 │    Bronze → Silver
-                 │
-                 └─ Licitaciones API
-                          ↓
-                       Landing
-                          ↓
-                     Bronze → Silver
-                          │
-             both branches succeeded
-                          ↓
-                        Gold
-                          ↓
-                  Dashboard Refresh
-```
-
-Purchase orders and licitaciones are processed in parallel.
-
-Gold starts only after both branches finish successfully.
-
----
-
-## Gold Layer
-
-The Gold layer exposes business-ready monthly aggregates.
-
-### Monthly Purchase Orders
-
-```text
-chilecompra.gold.compras_mensuales
-```
-
-Metrics include:
-
-- purchase-order count;
-- total ordered amount in CLP;
-- average order amount;
-- distinct suppliers;
-- distinct public organizations.
-
-### Purchase Orders by Organization
-
-```text
-chilecompra.gold.ordenes_por_organismo_mensual
-```
-
-Used to analyze procurement concentration by public organization.
-
-### Purchase Orders by Supplier
-
-```text
-chilecompra.gold.ordenes_por_proveedor_mensual
-```
-
-Used to analyze supplier concentration and monthly procurement amounts.
-
-### Licitaciones by Closing Month and State
-
-```text
-chilecompra.gold.licitaciones_por_mes_cierre_estado
-```
-
-Groups the currently observed licitaciones using their closing month and current state.
-
-This dataset should **not** be interpreted as historical state-transition tracking because Silver stores the latest observed licitacion state rather than an SCD history.
-
-### Purchase Order / Licitacion Relationship
-
-```text
-chilecompra.gold.oc_licitaciones_mensual
-```
-
-Measures:
-
-- total purchase orders;
-- orders containing a licitacion code;
-- orders without a licitacion code;
-- API matches where temporal coverage allows it;
-- percentage of purchase orders associated with a licitacion.
-
-Because historical purchase orders and API licitaciones have different temporal coverage, a low API match rate is not treated as a broken relationship.
-
----
-
-## Analytics Dashboard
-
-The project includes the version-controlled Databricks AI/BI dashboard:
-
-```text
-ChileCompra Analytics
-```
-
-It contains two pages.
-
-### Purchase Orders
-
-Includes:
-
-- total purchase orders;
-- total purchase-order amount;
-- distinct suppliers;
-- distinct public organizations;
-- monthly order amount;
-- monthly order count;
-- Top 10 public organizations;
-- Top 10 suppliers;
-- interactive period filtering.
-
-### Licitaciones
-
-Includes:
-
-- observed licitaciones;
-- published licitaciones;
-- awarded licitaciones;
-- deserted licitaciones;
-- licitaciones by state;
-- licitaciones by closing month;
-- monthly state composition;
-- percentage of purchase orders containing a licitacion code;
-- closing-month filtering.
-
-The dashboard is automatically refreshed only after all Gold tasks complete successfully.
-
-This keeps analytics synchronized with the final data layer without using an independent high-frequency refresh schedule.
-
----
-
-## Security
-
-Credentials are not embedded in notebooks or pipelines.
-
-The platform uses:
-
-- **Azure Key Vault** for the Mercado Público API credential;
-- **Azure Data Factory Managed Identity** for service authentication;
-- **Azure RBAC** for storage permissions;
-- **Databricks Access Connector** instead of storage account keys;
-- **Unity Catalog Storage Credentials and External Locations** for lakehouse access;
-- `.gitignore` to prevent local secrets from being committed.
-
-The architecture intentionally avoids storing API keys, storage account keys, or credentials in source code.
-
----
-
-## Operational Behavior
-
-The pipeline has been executed successfully through its automated daily trigger across multiple consecutive days.
-
-Operational visibility is currently provided through:
-
-- Azure Data Factory pipeline run history;
-- Databricks Job run history;
-- task-level status and dependencies;
-- Data Quality failures propagated as task failures;
-- dependency-based Gold execution;
-- dashboard refresh only after successful Gold completion.
-
-The project is being left operational for an observation period so that real failures, if they occur, can be analyzed and documented rather than artificially simulated.
-
----
-
-## Cost-Aware Design
-
-The project was designed under a limited Azure development budget.
-
-Cost-conscious decisions include:
-
-- batch instead of streaming;
-- one daily incremental execution;
-- Serverless Databricks compute;
-- parallel Gold tasks;
-- small Gold aggregate tables;
-- dashboard refresh only after new Gold data is available;
-- no unnecessary continuously running infrastructure.
-
-A final cost summary will be documented after the operational observation period.
-
----
-
-## Repository Structure
+## Estructura del repositorio
 
 ```text
 chilecompra-data-platform/
 │
 ├── adf/
 │   ├── dataset/
-│   ├── factory/
 │   ├── linkedService/
 │   ├── pipeline/
-│   │   ├── pl_chilecompra_historial.json
-│   │   └── pl_chilecompra_incremental.json
-│   ├── trigger/
-│   └── publish_config.json
+│   └── trigger/
 │
 ├── databricks/
 │   ├── setup/
-│   │
 │   ├── bronze/
-│   │   ├── 01_load_oc_historical.ipynb
-│   │   ├── 02_load_oc_api.ipynb
-│   │   └── 03_load_licitaciones_api.ipynb
-│   │
 │   ├── silver/
-│   │   ├── 01_transform_ordenes_compra.ipynb
-│   │   ├── 02_transform_ordenes_compra_items.ipynb
-│   │   ├── 03_transform_licitaciones_api.ipynb
-│   │   └── 04_merge_ordenes_compra_api.ipynb
-│   │
 │   ├── gold/
-│   │   ├── 01_compras_mensuales.ipynb
-│   │   ├── 02_compras_mensuales_organismo.ipynb
-│   │   ├── 03_ordenes_por_proveedor_mensual.ipynb
-│   │   ├── 04_licitaciones_por_estado_mensual.ipynb
-│   │   └── 05_oc_licitaciones_mensual.ipynb
-│   │
 │   └── Dashboard/
-│       └── ChileCompra Analytics.lvdash.json
 │
 ├── exploration/
 ├── .env.example
@@ -549,91 +275,41 @@ chilecompra-data-platform/
 
 ---
 
-## Key Engineering Decisions
+## Estado del proyecto
 
-### Batch instead of streaming
+Actualmente el flujo se encuentra automatizado de extremo a extremo:
 
-ChileCompra data does not require sub-minute processing, so a scheduled batch architecture provides lower complexity and cost while satisfying the business requirement.
+```text
+Fuente
+→ ADF
+→ Landing
+→ Bronze
+→ Silver
+→ Gold
+→ Dashboard
+```
 
-### Historical and incremental sources are separated
-
-Historical CSV files provide the initial dataset, while the API provides ongoing updates.
-
-A clear temporal boundary prevents both sources from independently loading the same period.
-
-### No inferred deletes
-
-Absence from a later API response is not considered proof of deletion.
-
-The Silver layer therefore follows an upsert-only strategy unless explicit delete semantics are available from the source.
-
-### Idempotency over execution uniqueness
-
-Landing preserves every execution using `run_id`, while lakehouse tables use deterministic `process_date` and business keys.
-
-This provides both execution traceability and safe reruns.
-
-### Full rebuild for small Gold tables
-
-Gold aggregates are small compared with Silver and can be deterministically regenerated.
-
-This reduces incremental-state complexity in the serving layer.
+El pipeline se mantiene operativo durante un período de observación para registrar comportamiento real, costos e incidentes antes del cierre definitivo del proyecto.
 
 ---
 
-## Current Limitations
+## Documentación técnica
 
-- Historical licitacion data is not available for the same period as historical purchase orders.
-- Licitacion state transitions are not modeled as SCD history.
-- API responses are mutable and do not provide complete CDC semantics.
-- The current platform is optimized for batch analytical workloads rather than real-time processing.
-- Infrastructure was provisioned manually rather than through Infrastructure as Code.
+La documentación detallada del proyecto se dividirá en:
 
-These limitations are deliberate and documented rather than hidden.
+```text
+docs/
+├── architecture.md
+├── engineering-decisions.md
+└── operations.md
+```
 
----
-
-## Possible Future Improvements
-
-Potential extensions include:
-
-- Infrastructure as Code with Terraform or Bicep;
-- Databricks Asset Bundles for deployment;
-- historical licitacion backfill if a suitable source becomes available;
-- SCD/event history for licitacion state transitions;
-- centralized monitoring and alerting;
-- automated data-quality metrics reporting;
-- CI/CD validation for notebooks and ADF artifacts.
+Estos documentos profundizan en la arquitectura, decisiones técnicas, operación, backfills, observabilidad y costos sin sobrecargar este README principal.
 
 ---
 
-## What This Project Demonstrates
-
-This project demonstrates practical experience with:
-
-- Azure cloud data architecture;
-- Data Lake design;
-- Medallion Architecture;
-- PySpark and Spark SQL;
-- Delta Lake;
-- incremental batch processing;
-- idempotent pipelines;
-- MERGE/upsert patterns;
-- historical backfills;
-- data-quality gates;
-- DAG orchestration;
-- parallel task execution;
-- source-system analysis;
-- cloud identity and secret management;
-- Unity Catalog;
-- analytics serving layers;
-- dashboard automation;
-- Git-based development.
-
----
-
-## Author
+## Autor
 
 **Nicolás Rojas**
 
-Data Engineering portfolio project built using public ChileCompra / Mercado Público data.
+Proyecto de portafolio orientado a **Data Engineering**, construido utilizando datos públicos de ChileCompra / Mercado Público.
