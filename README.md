@@ -8,7 +8,7 @@ Integra carga histórica e ingesta incremental diaria mediante una arquitectura 
 
 ## Arquitectura
 
-![Arquitectura ChileCompra Data Platform](docs/images/architecture.png)
+![Arquitectura ChileCompra Data Platform](docs/images/Diagrama-chile-compra.png)
 
 ```text
 ChileCompra / Mercado Público
