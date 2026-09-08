@@ -1,0 +1,1529 @@
+{
+  "datasets": [
+    {
+      "name": "ab7bd5c6",
+      "displayName": "compras_mensuales",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    cantidad_ordenes,\n",
+        "    monto_total_ordenes_clp,\n",
+        "    monto_promedio_orden_clp,\n",
+        "    organismos_distintos,\n",
+        "    proveedores_distintos\n",
+        "FROM chilecompra.gold.compras_mensuales\n",
+        "ORDER BY periodo"
+      ]
+    },
+    {
+      "name": "d744b73c",
+      "displayName": "kpis_generales",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(\n",
+        "        year(fecha_envio),\n",
+        "        month(fecha_envio),\n",
+        "        1\n",
+        "    ) AS periodo,\n",
+        "\n",
+        "    codigo,\n",
+        "    monto_total_clp,\n",
+        "    codigo_proveedor,\n",
+        "    codigo_organismo_publico\n",
+        "\n",
+        "FROM chilecompra.silver.ordenes_compra\n",
+        "\n",
+        "WHERE fecha_envio IS NOT NULL\n",
+        "  AND monto_total_clp IS NOT NULL\n",
+        "  AND codigo_estado <> 9"
+      ]
+    },
+    {
+      "name": "6f52e887",
+      "displayName": "top 10 organismos",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    organismo_publico,\n",
+        "    monto_total_ordenes_clp\n",
+        "FROM chilecompra.gold.ordenes_por_organismo_mensual"
+      ]
+    },
+    {
+      "name": "c461cb30",
+      "displayName": "Top 10 proveedores",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    date_format(make_date(anio, mes, 1), 'yyyy-MM') AS periodo_mes,\n",
+        "    nombre_proveedor,\n",
+        "    monto_total_ordenes_clp\n",
+        "FROM chilecompra.gold.ordenes_por_proveedor_mensual"
+      ]
+    },
+    {
+      "name": "6ffb67eb",
+      "displayName": "Licitaciones por estado",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    date_format(make_date(anio, mes, 1), 'yyyy-MM') AS periodo_mes,\n",
+        "\n",
+        "    CASE codigo_estado\n",
+        "        WHEN 5 THEN 'Publicada'\n",
+        "        WHEN 6 THEN 'Cerrada'\n",
+        "        WHEN 7 THEN 'Desierta'\n",
+        "        WHEN 8 THEN 'Adjudicada'\n",
+        "        WHEN 15 THEN 'Revocada'\n",
+        "        WHEN 16 THEN 'Suspendida'\n",
+        "        ELSE CONCAT('Estado ', codigo_estado)\n",
+        "    END AS estado,\n",
+        "\n",
+        "    cantidad_licitaciones\n",
+        "\n",
+        "FROM chilecompra.gold.licitaciones_por_mes_cierre_estado"
+      ]
+    },
+    {
+      "name": "bf39e372",
+      "displayName": "kpis_licitaciones",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    date_format(make_date(anio, mes, 1), 'yyyy-MM') AS periodo_mes,\n",
+        "\n",
+        "    SUM(cantidad_licitaciones) AS total_licitaciones,\n",
+        "\n",
+        "    SUM(\n",
+        "        CASE WHEN codigo_estado = 8\n",
+        "        THEN cantidad_licitaciones ELSE 0 END\n",
+        "    ) AS adjudicadas,\n",
+        "\n",
+        "    SUM(\n",
+        "        CASE WHEN codigo_estado = 5\n",
+        "        THEN cantidad_licitaciones ELSE 0 END\n",
+        "    ) AS publicadas,\n",
+        "\n",
+        "    SUM(\n",
+        "        CASE WHEN codigo_estado = 7\n",
+        "        THEN cantidad_licitaciones ELSE 0 END\n",
+        "    ) AS desiertas\n",
+        "\n",
+        "FROM chilecompra.gold.licitaciones_por_mes_cierre_estado\n",
+        "\n",
+        "GROUP BY anio, mes\n",
+        "\n",
+        "ORDER BY periodo"
+      ]
+    },
+    {
+      "name": "15fa1e6e",
+      "displayName": "Evolución mensual de licitaciones por fecha de cierre",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    date_format(make_date(anio, mes, 1), 'yyyy-MM') AS periodo_mes,\n",
+        "    SUM(cantidad_licitaciones) AS cantidad_licitaciones\n",
+        "\n",
+        "FROM chilecompra.gold.licitaciones_por_mes_cierre_estado\n",
+        "\n",
+        "GROUP BY anio, mes\n",
+        "\n",
+        "ORDER BY periodo"
+      ]
+    },
+    {
+      "name": "d286950c",
+      "displayName": "Evolución mensual por estado",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    date_format(make_date(anio, mes, 1), 'yyyy-MM') AS periodo_mes,\n",
+        "\n",
+        "    CASE codigo_estado\n",
+        "        WHEN 5 THEN 'Publicada'\n",
+        "        WHEN 6 THEN 'Cerrada'\n",
+        "        WHEN 7 THEN 'Desierta'\n",
+        "        WHEN 8 THEN 'Adjudicada'\n",
+        "        WHEN 15 THEN 'Revocada'\n",
+        "        WHEN 16 THEN 'Suspendida'\n",
+        "        ELSE CONCAT('Estado ', codigo_estado)\n",
+        "    END AS estado,\n",
+        "\n",
+        "    cantidad_licitaciones\n",
+        "\n",
+        "FROM chilecompra.gold.licitaciones_por_mes_cierre_estado\n",
+        "\n",
+        "ORDER BY periodo"
+      ]
+    },
+    {
+      "name": "f6f4ad98",
+      "displayName": "Relacion con ordenes de compras",
+      "queryLines": [
+        "SELECT\n",
+        "    make_date(anio, mes, 1) AS periodo,\n",
+        "    date_format(make_date(anio, mes, 1), 'yyyy-MM') AS periodo_mes,\n",
+        "    total_ordenes,\n",
+        "    ordenes_con_licitacion,\n",
+        "    ordenes_sin_licitacion,\n",
+        "    ordenes_con_match_api,\n",
+        "    porcentaje_con_licitacion\n",
+        "\n",
+        "FROM chilecompra.gold.oc_licitaciones_mensual\n",
+        "\n",
+        "ORDER BY periodo"
+      ]
+    },
+    {
+      "name": "628943e0",
+      "displayName": "Top Suppliers by Order Amount in Chile 2023",
+      "queryLines": [
+        "SELECT\n",
+        "    nombre_proveedor,\n",
+        "    SUM(monto_total_ordenes_clp) AS monto_total_ordenes_clp\n",
+        "FROM chilecompra.gold.ordenes_por_proveedor_mensual\n",
+        "WHERE\n",
+        "    array_contains(\n",
+        "        :periodo_filtro,\n",
+        "        date_format(make_date(anio, mes, 1), 'yyyy-MM')\n",
+        "    )\n",
+        "    OR :periodo_filtro IS NULL\n",
+        "GROUP BY nombre_proveedor\n",
+        "ORDER BY monto_total_ordenes_clp DESC\n",
+        "LIMIT 10"
+      ],
+      "parameters": [
+        {
+          "displayName": "periodo_filtro",
+          "keyword": "periodo_filtro",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "operator": {
+              "operator": "AND"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "88e8f059",
+      "displayName": "Órdenes de compras",
+      "layout": [
+        {
+          "widget": {
+            "name": "monto-mensual-ordenes-compra",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ab7bd5c6",
+                  "fields": [
+                    {
+                      "name": "sum(monto_total_ordenes_clp)",
+                      "expression": "SUM(`monto_total_ordenes_clp`)"
+                    },
+                    {
+                      "name": "monthly(periodo)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `periodo`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Monto mensual de órdenes de compra</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "lineShape": "smooth"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(periodo)",
+                  "axis": {
+                    "labelAngle": 0
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(monto_total_ordenes_clp)",
+                  "displayName": "Monto total de órdenes CLP",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": true,
+                  "text": {
+                    "fieldName": "sum(monto_total_ordenes_clp)",
+                    "displayName": "monto total de ordenes"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-ordenes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d744b73c",
+                  "fields": [
+                    {
+                      "name": "countdistinct(codigo)",
+                      "expression": "COUNT(DISTINCT `codigo`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Total órdenes</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(codigo)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "62398263",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d744b73c",
+                  "fields": [
+                    {
+                      "name": "sum(monto_total_clp)",
+                      "expression": "SUM(`monto_total_clp`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Monto total órdenes CLP</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(monto_total_clp)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "91aa4468",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d744b73c",
+                  "fields": [
+                    {
+                      "name": "countdistinct(codigo_proveedor)",
+                      "expression": "COUNT(DISTINCT `codigo_proveedor`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Proveedores distintos</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(codigo_proveedor)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "5902d72e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d744b73c",
+                  "fields": [
+                    {
+                      "name": "countdistinct(codigo_organismo_publico)",
+                      "expression": "COUNT(DISTINCT `codigo_organismo_publico`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Organismos distintos</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(codigo_organismo_publico)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cantidad-mensual-ordenes-compra",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ab7bd5c6",
+                  "fields": [
+                    {
+                      "name": "monthly(periodo)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `periodo`)"
+                    },
+                    {
+                      "name": "sum(cantidad_ordenes)",
+                      "expression": "SUM(`cantidad_ordenes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Cantidad mensual de órdenes de compra</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(periodo)",
+                  "displayName": "Periodo",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(cantidad_ordenes)",
+                  "displayName": "Cantidad de ordenes",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top-10-organismos-monto-ordenes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6f52e887",
+                  "fields": [
+                    {
+                      "name": "sum(monto_total_ordenes_clp)",
+                      "expression": "SUM(`monto_total_ordenes_clp`)"
+                    },
+                    {
+                      "name": "organismo_publico",
+                      "expression": "`organismo_publico`"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "SUM(`monto_total_ordenes_clp`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "headerAlignment": "center",
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Top 10 organismos por monto de órdenes</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(monto_total_ordenes_clp)",
+                  "displayName": "Monto total órdenes CLP",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "organismo_publico",
+                  "displayName": "Organismo Publico",
+                  "scale": {
+                    "type": "categorical",
+                    "categorySize": {
+                      "type": "number-of-categories",
+                      "number": 10
+                    },
+                    "sort": {
+                      "by": "measure-reversed",
+                      "measure": {
+                        "fieldName": "sum(monto_total_ordenes_clp)"
+                      }
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top-10-organismos-monto-ordenes-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c461cb30",
+                  "fields": [
+                    {
+                      "name": "nombre_proveedor",
+                      "expression": "`nombre_proveedor`"
+                    },
+                    {
+                      "name": "sum(monto_total_ordenes_clp)",
+                      "expression": "SUM(`monto_total_ordenes_clp`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "SUM(`monto_total_ordenes_clp`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Top 10 proveedores por monto de órdenes</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(monto_total_ordenes_clp)",
+                  "displayName": "Monto Total órdenes CLP",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "nombre_proveedor",
+                  "displayName": "Nombre Proveedor",
+                  "scale": {
+                    "type": "categorical",
+                    "categorySize": {
+                      "type": "number-of-categories",
+                      "number": 10
+                    },
+                    "sort": {
+                      "by": "measure-reversed",
+                      "measure": {
+                        "fieldName": "sum(monto_total_ordenes_clp)"
+                      }
+                    }
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "nombre_proveedor",
+                    "displayName": "Nombre Proveedor"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "0ea91f38",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# <span style=\"text-align:center;display:block\">ÓRDENES DE COMPRA </span>\n",
+                "\n",
+                "## <span style=\"text-align:center;display:block\">Evolución mensual y concentración por organismos y proveedores según monto de OC</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "periodo",
+            "queries": [
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a872fc51194db004d24c39cb3450_periodo",
+                "query": {
+                  "datasetName": "ab7bd5c6",
+                  "fields": [
+                    {
+                      "name": "periodo",
+                      "expression": "`periodo`"
+                    },
+                    {
+                      "name": "periodo_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a875887d15199fcb7dcdf7510924_periodo",
+                "query": {
+                  "datasetName": "6f52e887",
+                  "fields": [
+                    {
+                      "name": "periodo",
+                      "expression": "`periodo`"
+                    },
+                    {
+                      "name": "periodo_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8743bce1846ad4ee6acab363861_periodo",
+                "query": {
+                  "datasetName": "d744b73c",
+                  "fields": [
+                    {
+                      "name": "periodo",
+                      "expression": "`periodo`"
+                    },
+                    {
+                      "name": "periodo_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8772171137f9485a8b738a8d7a6_periodo",
+                "query": {
+                  "datasetName": "c461cb30",
+                  "fields": [
+                    {
+                      "name": "periodo",
+                      "expression": "`periodo`"
+                    },
+                    {
+                      "name": "periodo_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "### <span style=\"text-align:center;display:block\">Período</span>",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "periodo",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a872fc51194db004d24c39cb3450_periodo"
+                  },
+                  {
+                    "fieldName": "periodo",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a875887d15199fcb7dcdf7510924_periodo"
+                  },
+                  {
+                    "fieldName": "periodo",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8743bce1846ad4ee6acab363861_periodo"
+                  },
+                  {
+                    "fieldName": "periodo",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8772171137f9485a8b738a8d7a6_periodo"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "ab730c44",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "23d860d9",
+      "displayName": "Licitaciones",
+      "layout": [
+        {
+          "widget": {
+            "name": "total-licitaciones-observadas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf39e372",
+                  "fields": [
+                    {
+                      "name": "sum(total_licitaciones)",
+                      "expression": "SUM(`total_licitaciones`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Total licitaciones observadas</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_licitaciones)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "adjudicadas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf39e372",
+                  "fields": [
+                    {
+                      "name": "sum(adjudicadas)",
+                      "expression": "SUM(`adjudicadas`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Adjudicadas</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(adjudicadas)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "desiertas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf39e372",
+                  "fields": [
+                    {
+                      "name": "sum(desiertas)",
+                      "expression": "SUM(`desiertas`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Desiertas</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(desiertas)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "publicadas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf39e372",
+                  "fields": [
+                    {
+                      "name": "sum(publicadas)",
+                      "expression": "SUM(`publicadas`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Publicadas</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(publicadas)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "licitaciones-observadas-por-estado",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6ffb67eb",
+                  "fields": [
+                    {
+                      "name": "sum(cantidad_licitaciones)",
+                      "expression": "SUM(`cantidad_licitaciones`)"
+                    },
+                    {
+                      "name": "estado",
+                      "expression": "`estado`"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "SUM(`cantidad_licitaciones`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Licitaciones observadas por estado</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(cantidad_licitaciones)",
+                  "displayName": "Cantidad de licitaciones",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "estado",
+                  "displayName": "Estado",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "measure-reversed",
+                      "measure": {
+                        "fieldName": "sum(cantidad_licitaciones)"
+                      }
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "licitaciones-observadas-por-mes-cierre",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "15fa1e6e",
+                  "fields": [
+                    {
+                      "name": "monthly(periodo)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `periodo`)"
+                    },
+                    {
+                      "name": "sum(cantidad_licitaciones)",
+                      "expression": "SUM(`cantidad_licitaciones`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">Licitaciones observadas por mes de cierre</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(periodo)",
+                  "displayName": "Periodo",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(cantidad_licitaciones)",
+                  "displayName": "Cantidad licitaciones",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "composicion-estados-por-mes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d286950c",
+                  "fields": [
+                    {
+                      "name": "estado",
+                      "expression": "`estado`"
+                    },
+                    {
+                      "name": "sum(cantidad_licitaciones)",
+                      "expression": "SUM(`cantidad_licitaciones`)"
+                    },
+                    {
+                      "name": "monthly(periodo)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `periodo`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Composición mensual de licitaciones por estado</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ],
+                "layout": "percent-stack"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(periodo)",
+                  "axis": {
+                    "hideLabels": false,
+                    "hideGrid": false
+                  },
+                  "displayName": "Periodo",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(cantidad_licitaciones)",
+                  "displayName": "Cantidad licitaciones",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "estado",
+                  "displayName": "Estado",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true,
+                  "text": {
+                    "fieldName": "sum(cantidad_licitaciones)",
+                    "displayName": "Cantidad licitaciones"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "7e031376",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f6f4ad98",
+                  "fields": [
+                    {
+                      "name": "monthly(periodo)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `periodo`)"
+                    },
+                    {
+                      "name": "porcentaje_con_licitacion",
+                      "expression": "`porcentaje_con_licitacion`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "<span style=\"text-align:center;display:block\"><span style=\"font-size:18px\">Porcentaje mensual de órdenes con código de licitación</span></span>",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(periodo)",
+                  "displayName": "Periodo",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "porcentaje_con_licitacion",
+                  "formatTemplate": "{{ @formatted }}%",
+                  "displayName": "Porcentaje con licitacion",
+                  "scale": {
+                    "type": "quantitative",
+                    "reverse": false,
+                    "domain": {
+                      "min": 0,
+                      "max": 100
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "f23826fe",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# <span style=\"text-align:center;display:block\">LICITACIONES</span>\n",
+                "\n",
+                "## <span style=\"text-align:center;display:block\">Distribución por estado, mes de cierre y relación con órdenes de compra</span>"
+              ],
+              "verticalAlign": "VERTICAL_ALIGN_TOP"
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#FFFFFF"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "mes-cierre1",
+            "queries": [
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a878cb56136f8547c156637cd851_periodo_mes",
+                "query": {
+                  "datasetName": "bf39e372",
+                  "fields": [
+                    {
+                      "name": "periodo_mes",
+                      "expression": "`periodo_mes`"
+                    },
+                    {
+                      "name": "periodo_mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8799dce156c97351951f0e6f117_periodo_mes",
+                "query": {
+                  "datasetName": "15fa1e6e",
+                  "fields": [
+                    {
+                      "name": "periodo_mes",
+                      "expression": "`periodo_mes`"
+                    },
+                    {
+                      "name": "periodo_mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a87a13a51cfb925882e48373cfab_periodo_mes",
+                "query": {
+                  "datasetName": "d286950c",
+                  "fields": [
+                    {
+                      "name": "periodo_mes",
+                      "expression": "`periodo_mes`"
+                    },
+                    {
+                      "name": "periodo_mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a87c4eee1e20a826d5cd5f35e604_periodo_mes",
+                "query": {
+                  "datasetName": "f6f4ad98",
+                  "fields": [
+                    {
+                      "name": "periodo_mes",
+                      "expression": "`periodo_mes`"
+                    },
+                    {
+                      "name": "periodo_mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8784ace1cf1b74aec79a30e4daf_periodo_mes",
+                "query": {
+                  "datasetName": "6ffb67eb",
+                  "fields": [
+                    {
+                      "name": "periodo_mes",
+                      "expression": "`periodo_mes`"
+                    },
+                    {
+                      "name": "periodo_mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "scale": {
+                "type": "categorical",
+                "sort": {
+                  "by": "custom-order",
+                  "orderedValues": [
+                    "2026-12",
+                    "2026-11",
+                    "2026-10",
+                    "2026-09",
+                    "2026-08",
+                    "2026-07",
+                    "2026-06",
+                    "2026-05",
+                    "2026-04",
+                    "2026-03",
+                    "2026-02",
+                    "2026-01",
+                    "2025-12",
+                    "2025-11",
+                    "2025-09",
+                    "2025-07",
+                    "2025-06",
+                    "2025-03"
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "### <span style=\"text-align:center;display:block;\">Mes de cierre</span>",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "periodo_mes",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a878cb56136f8547c156637cd851_periodo_mes"
+                  },
+                  {
+                    "fieldName": "periodo_mes",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8799dce156c97351951f0e6f117_periodo_mes"
+                  },
+                  {
+                    "fieldName": "periodo_mes",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a87a13a51cfb925882e48373cfab_periodo_mes"
+                  },
+                  {
+                    "fieldName": "periodo_mes",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a87c4eee1e20a826d5cd5f35e604_periodo_mes"
+                  },
+                  {
+                    "fieldName": "periodo_mes",
+                    "queryName": "dashboards/01f1a872d6eb17d896602f91cde15475/datasets/01f1a8784ace1cf1b74aec79a30e4daf_periodo_mes"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
